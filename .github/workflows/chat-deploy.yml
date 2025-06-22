@@ -20,7 +20,7 @@ jobs:
 
     - name: Deploy Docker container on EC2
       run: |
-        ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2.pem ec2-user@54.147.166.156 << 'EOF'
+        ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2.pem ec2-user@50.19.170.16 << 'EOF'
           docker pull kamartinez/chat-service:latest
           docker stop chat-service || true
           docker rm chat-service || true
