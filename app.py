@@ -4,7 +4,7 @@ import uvicorn
 
 app = FastAPI()
 
-# Permitir acceso desde el frontend
+# Permitir acceso desde el frontends
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Cambia por tu dominio en producción
