@@ -19,7 +19,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
-    - name: Build Docker images for add and get friends services
+    - name: Build Docker images for chat services
       run: |
         docker build -t kamartinez/chat-service
 
