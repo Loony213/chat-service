@@ -21,7 +21,7 @@ jobs:
 
     - name: Build Docker images for chat services
       run: |
-        docker build -t kamartinez/chat-service
+        docker build -t kamartinez/chat-service .
 
     - name: Push images to Docker Hub
       run: |
