@@ -1,28 +1,43 @@
-name: Deploy Chat Service to EC2
+name: Deploy Chat Services to EC2
 
 on:
   push:
-    branches: [ test ]  # Puedes cambiar a 'main' si es tu rama principal
+    branches:
+      - test  
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v3
+    
+    - name: Set up SSH key for EC2
+      uses: webfactory/ssh-agent@v0.5.3
+      with:
+        ssh-private-key: ${{ secrets.EC2_PEM_KEY }}
 
-    - name: Set up SSH
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.EC2_PEM_KEY }}" > ~/.ssh/ec2.pem
-        chmod 600 ~/.ssh/ec2.pem
+    - name: Checkout repository
+      uses: actions/checkout@v2
 
-    - name: Deploy Docker container on EC2
+    - name: Build Docker images for add and get friends services
       run: |
-        ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2.pem ec2-user@34.231.95.89 << 'EOF'
-          docker pull kamartinez/chat-service:latest
+        docker build -t kamartinez/chat-service
+
+    - name: Push images to Docker Hub
+      run: |
+        docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+        docker push kamartinez/chat-service
+
+    - name: Deploy services to EC2
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: 34.231.95.89
+        username: ec2-user
+        key: ${{ secrets.EC2_PEM_KEY }}
+        script: |
           docker stop chat-service || true
           docker rm chat-service || true
-          docker run -d --name chat-service -p 8000:8000 kamartinez/chat-service:latest
-        EOF
+
+          docker pull kamartinez/chat-service
+
+          docker run -d --name chat-service -p 8000:8000 kamartinez/chat-service
