@@ -1,49 +1,33 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from app.models.message import Message
-from app.services.websocket_service import WebSocketService
-from app.core.ws_manager import WebSocketManager
+from app.services.websocket_service import handle_message  # Importa la función de servicio
 import json
 
 router = APIRouter()
 
-ws_manager = WebSocketManager()
-websocket_service = WebSocketService(ws_manager)
+ws_manager = {}  # Aquí gestionas las conexiones activas
 
 @router.websocket("/ws/{email}")
 async def websocket_endpoint(websocket: WebSocket, email: str):
-    # Verificar si ya existe una conexión y cerrarla si es necesario
-    if email in ws_manager.active_connections:
-        await ws_manager.active_connections[email].close()
-    
-    # Aceptar la nueva conexión
+    # Aceptar la conexión WebSocket
     await websocket.accept()
-    # Añadir la conexión al manager
-    ws_manager.active_connections[email] = websocket
-    
+    ws_manager[email] = websocket
+
     try:
         while True:
             data = await websocket.receive_text()
-            message_data = json.loads(data)
+            message_data = json.loads(data)  # Recibir los datos en formato JSON
             to_email = message_data.get("to")
-            msg = message_data.get("message")
-            sender = message_data.get("from")
+            chat_id, msg = await handle_message(message_data)  # Guarda el mensaje en MongoDB
 
-            if to_email in ws_manager.active_connections:
-                # Enviar el mensaje al destinatario
-                await ws_manager.active_connections[to_email].send_json({
-                    "sender": sender,
+            if to_email in ws_manager:
+                await ws_manager[to_email].send_json({
+                    "sender": message_data.get("from"),
                     "message": msg
                 })
             else:
-                # Si el destinatario no está conectado, informar al remitente
                 await websocket.send_json({
                     "sender": "Sistema",
                     "message": f"{to_email} no está conectado"
                 })
     except WebSocketDisconnect:
-        # Manejar la desconexión del WebSocket
-        ws_manager.active_connections.pop(email, None)  # Eliminar la conexión del manager
-    except Exception as e:
-        # Manejo de otros errores
-        print(f"Error en WebSocket: {str(e)}")
-        # Opcionalmente, manejar el error o realizar algún reintento
+        del ws_manager[email]

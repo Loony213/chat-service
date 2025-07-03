@@ -1,22 +1,25 @@
-from app.core.ws_manager import WebSocketManager
-from app.models.message import Message
+import json
+from pymongo import MongoClient
+from datetime import datetime
 
-class WebSocketService:
-    def __init__(self, ws_manager: WebSocketManager):
-        self.ws_manager = ws_manager
+# Conexión a MongoDB
+client = MongoClient("mongodb://44.193.21.197:27017/")
+db = client["chat_db"]  # Base de datos
+messages_collection = db["messages"]  # Colección de mensajes
 
-    async def handle_message(self, websocket, email: str, message: Message):
-        to_email = message.to
-        msg = message.message
-        sender = message.from_email
-
-        if to_email in self.ws_manager.active_connections:
-            await self.ws_manager.send_message(to_email, {
-                "sender": sender,
-                "message": msg
-            })
-        else:
-            await websocket.send_json({
-                "sender": "Sistema",
-                "message": f"{to_email} no está conectado"
-            })
+async def handle_message(data):
+    sender = data.get("from")
+    to_email = data.get("to")
+    msg = data.get("message")
+    chat_id = f"{sender}_{to_email}" if sender < to_email else f"{to_email}_{sender}"
+    
+    # Guardar el mensaje en MongoDB
+    messages_collection.insert_one({
+        "chat_id": chat_id,
+        "sender_id": sender,
+        "receiver_id": to_email,
+        "message": msg,
+        "timestamp": data.get("timestamp")
+    })
+    
+    return chat_id, msg  # Retorna el chat_id para la consulta de mensajes
