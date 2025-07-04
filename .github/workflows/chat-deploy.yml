@@ -40,4 +40,4 @@ jobs:
 
           docker pull kamartinez/chat-service
 
-          docker run -d --name chat-service -p 8000:8000 kamartinez/chat-service
+          docker run -d --name chat-service -p 8000:8000 --restart unless-stopped kamartinez/chat-service
